@@ -1,0 +1,26 @@
+{
+  "name": "inventory-mobile-app",
+  "version": "1.0.0",
+  "description": "React Native Android Mobile App for MERN Inventory System",
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "~1.23.1",
+    "axios": "^1.6.8",
+    "expo": "~51.0.0",
+    "expo-status-bar": "~1.12.1",
+    "lucide-react-native": "^0.368.0",
+    "react": "18.2.0",
+    "react-native": "0.74.1",
+    "react-native-svg": "15.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0"
+  },
+  "private": true
+}

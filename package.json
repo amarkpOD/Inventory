@@ -6,6 +6,8 @@
   "scripts": {
     "server": "cd server && npm start",
     "client": "cd client && npm run dev",
+    "mobile": "cd mobile && npm start",
+    "android": "cd mobile && npm run android",
     "build": "cd client && npm install && npm run build",
     "vercel-build": "cd client && npm install && npm run build",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install",
