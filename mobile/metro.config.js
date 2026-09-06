@@ -3,10 +3,12 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// Exclude parent monorepo folders (client, server) from Metro file watcher to prevent EMFILE limit
+// Exclude parent monorepo folders (client, server, root node_modules) from Metro file watcher
 config.resolver.blockList = [
   new RegExp(path.resolve(__dirname, '../client').replace(/[/]/g, '[/\\\\]') + '/.*'),
   new RegExp(path.resolve(__dirname, '../server').replace(/[/]/g, '[/\\\\]') + '/.*'),
+  new RegExp(path.resolve(__dirname, '../node_modules').replace(/[/]/g, '[/\\\\]') + '/.*'),
+  new RegExp(path.resolve(__dirname, '../.git').replace(/[/]/g, '[/\\\\]') + '/.*'),
 ];
 
 module.exports = config;
