@@ -3,6 +3,9 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
+config.watchFolders = [__dirname];
+config.maxWorkers = 2;
+
 // Exclude parent monorepo folders (client, server, root node_modules) from Metro file watcher
 config.resolver.blockList = [
   new RegExp(path.resolve(__dirname, '../client').replace(/[/]/g, '[/\\\\]') + '/.*'),
