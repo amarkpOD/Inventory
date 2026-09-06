@@ -1,0 +1,16 @@
+{
+  "name": "inventory-management-system",
+  "version": "1.0.0",
+  "description": "MERN Stack Inventory Management System with Dashboard, Item Master, and Role-based Auth",
+  "main": "server/server.js",
+  "scripts": {
+    "server": "cd server && npm start",
+    "client": "cd client && npm run dev",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
