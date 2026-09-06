@@ -27,7 +27,20 @@ app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/transactions', transactionRoutes);
 
-// Health check endpoint
+// Root & Health check endpoints for Render
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Inventory System API',
+    status: 'Active',
+    message: 'Backend server is running on Render',
+    endpoints: {
+      health: '/api/health',
+      items: '/api/items',
+      transactions: '/api/transactions',
+    },
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
