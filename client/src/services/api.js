@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? 'https://inventory-4lwr.onrender.com/api' : '/api'),
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? 'https://inventory-wh75.onrender.com/api' : '/api'),
 });
 
 // Interceptor to attach Authorization Bearer token to all requests
