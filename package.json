@@ -5,6 +5,7 @@
   "main": "server/server.js",
   "scripts": {
     "server": "cd server && npm start",
+    "server:test": "cd server && npm run test:server",
     "client": "cd client && npm run dev",
     "mobile": "cd mobile && npm start",
     "android": "cd mobile && npm run android",
@@ -12,7 +13,8 @@
     "vercel-build": "cd client && npm install && npm run build",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install",
     "start": "concurrently \"npm run server\" \"npm run client\"",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev:test": "concurrently \"npm run server:test\" \"VITE_API_PROXY=http://localhost:5002 npm run client\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

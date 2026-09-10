@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { ToastProvider, useToast } from './src/context/ToastContext';
 import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import ItemMasterScreen from './src/screens/ItemMasterScreen';
@@ -23,11 +24,11 @@ import {
   LogOut,
   User,
   ShieldCheck,
-  CheckCircle,
 } from 'lucide-react-native';
 
 function MainApp() {
   const { user, loading, logout, isAdmin } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingItem, setEditingItem] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -35,6 +36,27 @@ function MainApp() {
   // Modals state
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isAddStockModalOpen, setIsAddStockModalOpen] = useState(false);
+  const [preselectedItem, setPreselectedItem] = useState(null);
+
+  const openSellModal = (item = null) => {
+    setPreselectedItem(item || null);
+    setIsSellModalOpen(true);
+  };
+
+  const openAddStockModal = (item = null) => {
+    setPreselectedItem(item || null);
+    setIsAddStockModalOpen(true);
+  };
+
+  const closeSellModal = () => {
+    setIsSellModalOpen(false);
+    setPreselectedItem(null);
+  };
+
+  const closeAddStockModal = () => {
+    setIsAddStockModalOpen(false);
+    setPreselectedItem(null);
+  };
 
   if (loading) {
     return (
@@ -64,8 +86,9 @@ function MainApp() {
     setRefreshKey((k) => k + 1);
   };
 
-  const handleStockUpdated = () => {
+  const handleStockUpdated = (message, type = 'success') => {
     setRefreshKey((k) => k + 1);
+    if (message) showToast(message, type);
   };
 
   const handleLogout = () => {
@@ -84,8 +107,8 @@ function MainApp() {
         {activeTab === 'dashboard' && (
           <DashboardScreen
             key={refreshKey}
-            onOpenSellModal={() => setIsSellModalOpen(true)}
-            onOpenAddStockModal={() => setIsAddStockModalOpen(true)}
+            onOpenSellModal={openSellModal}
+            onOpenAddStockModal={openAddStockModal}
           />
         )}
         {activeTab === 'item-master' && (
@@ -93,8 +116,8 @@ function MainApp() {
             key={refreshKey}
             onAddNewItem={handleAddNewItem}
             onEditItem={handleEditItem}
-            onOpenSellModal={() => setIsSellModalOpen(true)}
-            onOpenAddStockModal={() => setIsAddStockModalOpen(true)}
+            onOpenSellModal={openSellModal}
+            onOpenAddStockModal={openAddStockModal}
           />
         )}
         {activeTab === 'add-edit-item' && (
@@ -209,13 +232,15 @@ function MainApp() {
       {/* Global Quick Action Modals */}
       <SellModal
         visible={isSellModalOpen}
-        onClose={() => setIsSellModalOpen(false)}
+        onClose={closeSellModal}
         onSuccess={handleStockUpdated}
+        initialItem={preselectedItem}
       />
       <AddStockModal
         visible={isAddStockModalOpen}
-        onClose={() => setIsAddStockModalOpen(false)}
+        onClose={closeAddStockModal}
         onSuccess={handleStockUpdated}
+        initialItem={preselectedItem}
       />
     </SafeAreaView>
   );
@@ -224,7 +249,9 @@ function MainApp() {
 export default function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <ToastProvider>
+        <MainApp />
+      </ToastProvider>
     </AuthProvider>
   );
 }
@@ -253,7 +280,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 20,
     paddingHorizontal: 12,
   },
   tabItem: {

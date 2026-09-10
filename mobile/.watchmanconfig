@@ -1,0 +1,12 @@
+{
+  "ignore_dirs": [
+    ".git",
+    ".expo",
+    "dist",
+    "web-build",
+    "../client",
+    "../server",
+    "../node_modules",
+    "../.git"
+  ]
+}

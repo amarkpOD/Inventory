@@ -17,13 +17,11 @@ import {
   Layers,
   ShoppingBag,
   PackagePlus,
-  RefreshCw,
-  LogOut,
   ShieldCheck,
   UserCheck,
 } from 'lucide-react-native';
 
-export default function DashboardScreen({ onOpenSellModal, onOpenAddStockModal, onLogout }) {
+export default function DashboardScreen({ onOpenSellModal, onOpenAddStockModal }) {
   const { user, isAdmin } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);

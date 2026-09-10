@@ -51,7 +51,14 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       return { success: true, user: userData };
     } catch (error) {
-      const msg = error.response?.data?.message || 'Login failed. Please check credentials.';
+      let msg = error.response?.data?.message || 'Login failed. Please check credentials.';
+      if (!error.response) {
+        if (error.code === 'ECONNABORTED') {
+          msg = 'Server is waking up (Render). Please wait a moment and try again.';
+        } else {
+          msg = 'Cannot reach API. Check internet connection or try again in a minute.';
+        }
+      }
       return { success: false, error: msg };
     }
   };

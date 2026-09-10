@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { fetchItems, deleteItem } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import {
   Search,
   Plus,
@@ -20,7 +21,6 @@ import {
   Edit,
   Trash2,
   Boxes,
-  Filter,
 } from 'lucide-react-native';
 
 export default function ItemMasterScreen({
@@ -30,6 +30,7 @@ export default function ItemMasterScreen({
   onOpenAddStockModal,
 }) {
   const { isAdmin } = useAuth();
+  const { showToast } = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,6 +72,7 @@ export default function ItemMasterScreen({
           onPress: async () => {
             try {
               await deleteItem(item._id);
+              showToast(`Deleted "${item.name}"`, 'delete');
               loadItems();
             } catch (err) {
               Alert.alert('Error', err.response?.data?.message || 'Failed to delete item');
@@ -202,7 +204,7 @@ export default function ItemMasterScreen({
                 {/* Actions Row */}
                 <View style={styles.actionsRow}>
                   <TouchableOpacity
-                    style={styles.sellBtn}
+                    style={[styles.sellBtn, isOutOfStock && { opacity: 0.4 }]}
                     onPress={() => onOpenSellModal(item)}
                     disabled={isOutOfStock}
                   >

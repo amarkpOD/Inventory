@@ -1,38 +1,57 @@
+const path = require('path');
+const dotenv = require('dotenv');
+
+// Load env BEFORE models so MONGO_DB_NAME / ITEMS_COLLECTION apply correctly.
+// APP_ENV=testing → .env.testing | production → .env.production | default → .env
+const appEnv =
+  process.env.APP_ENV ||
+  (process.env.NODE_ENV === 'production' ? 'production' : 'development');
+const envFiles = {
+  testing: '.env.testing',
+  production: '.env.production',
+  development: '.env',
+};
+const chosen = envFiles[appEnv] || '.env';
+dotenv.config({ path: path.join(__dirname, chosen) });
+// Local fallback — never override production Render env with a Testing .env
+if (appEnv === 'testing') {
+  dotenv.config({ path: path.join(__dirname, '.env') });
+}
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const seedInitialData = require('./utils/seedData');
 
-// Load environment variables
-dotenv.config();
-
 const app = express();
+const dbName = process.env.MONGO_DB_NAME || 'Inventory';
+const itemsCollection = process.env.ITEMS_COLLECTION || 'Inventory';
 
-// Connect to MongoDB Atlas
 connectDB().then(async () => {
-  // Seed admin/worker accounts and sample data if needed
   await seedInitialData();
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/transactions', transactionRoutes);
 
-// Root & Health check endpoints for Render
 app.get('/', (req, res) => {
   res.json({
     name: 'Inventory System API',
     status: 'Active',
-    message: 'Backend server is running on Render',
+    env: process.env.APP_ENV || process.env.NODE_ENV || 'development',
+    database: dbName,
+    itemsCollection,
+    message:
+      dbName === 'Testing'
+        ? 'Running against Testing DB — production data is safe'
+        : 'Running against production Inventory DB',
     endpoints: {
       health: '/api/health',
       items: '/api/items',
@@ -46,15 +65,16 @@ app.get('/api/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     service: 'MERN Inventory Management API',
+    env: process.env.APP_ENV || process.env.NODE_ENV || 'development',
+    database: dbName,
+    itemsCollection,
   });
 });
 
-// 404 Handler
 app.use((req, res) => {
   res.status(404).json({ message: `Route ${req.originalUrl} not found` });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err.stack);
   res.status(500).json({ message: 'Internal Server Error', error: err.message });
@@ -63,5 +83,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Inventory System API Server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  console.log(
+    `🚀 Inventory API on :${PORT} | env=${process.env.APP_ENV || 'development'} | db=${dbName} | items=${itemsCollection}`
+  );
 });

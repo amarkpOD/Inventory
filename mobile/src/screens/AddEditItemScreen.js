@@ -9,9 +9,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { createItem, updateItem } from '../services/api';
-import { ArrowLeft, Save, Package } from 'lucide-react-native';
+import { ArrowLeft, Save } from 'lucide-react-native';
+import { useToast } from '../context/ToastContext';
 
 export default function AddEditItemScreen({ editingItem, onCancel, onSuccess }) {
+  const { showToast } = useToast();
   const isEditing = !!editingItem;
 
   const [name, setName] = useState('');
@@ -66,8 +68,10 @@ export default function AddEditItemScreen({ editingItem, onCancel, onSuccess }) 
     try {
       if (isEditing) {
         await updateItem(editingItem._id, itemData);
+        showToast(`Updated "${itemData.name}"`, 'success');
       } else {
         await createItem(itemData);
+        showToast(`Added "${itemData.name}"`, 'add');
       }
       if (onSuccess) onSuccess();
     } catch (err) {
@@ -109,6 +113,19 @@ export default function AddEditItemScreen({ editingItem, onCancel, onSuccess }) 
             placeholderTextColor="#64748b"
             value={name}
             onChangeText={setName}
+          />
+        </View>
+
+        {/* SKU */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>SKU (optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. OIL-1L-001"
+            placeholderTextColor="#64748b"
+            value={sku}
+            onChangeText={setSku}
+            autoCapitalize="characters"
           />
         </View>
 

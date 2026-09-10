@@ -1,67 +1,94 @@
-# InventoryHub - React Native Android Mobile Application
+# InventoryHub - React Native (Expo) Mobile App
 
-A mobile application for Android devices connected to the MERN Inventory System API on Render (`https://inventory-wh75.onrender.com/api`).
-
----
-
-## 📱 Features Included
-
-- 🔑 **Authentication & Credentials Auto-Fill**:
-  - Sign in as `admin` (`admin123`) or `worker` (`worker123`).
-  - Quick Demo fill buttons (**Fill Admin** / **Fill Worker**).
-- 📊 **Mobile Dashboard**:
-  - Today, Weekly, Monthly Sales Cards (`₹`).
-  - Total Stock Valuation (`₹`).
-  - Stock Quantity Descending Ranking List.
-- 📦 **Item Master Screen**:
-  - Real-time search bar (Item Name & SKU).
-  - Filter chips (`All`, `In Stock`, `Low Stock`, `Out of Stock`).
-  - Quick action buttons (Sell, Add, Edit, Delete).
-- 🛒 **Native Quick Modals**:
-  - Clickable item search list for **Sell Stock** and **Add Stock** with custom prices.
-- 📑 **Transactions Log**:
-  - Filterable history list of Sell & Add transactions for the last 30 days.
+Android/iOS mobile client for the MERN Inventory System. Uses the live Render API:
+`https://inventory-wh75.onrender.com/api`
 
 ---
 
-## 🚀 How to Run the App
+## Features
 
-### Option 1: Run with Expo Go on your Physical Android Phone
-1. Install **Expo Go** app from Google Play Store on your Android phone.
-2. In your terminal, run:
-   ```bash
-   cd mobile
-   npm install
-   npx expo start
-   ```
-3. Scan the QR code shown in your terminal using the **Expo Go** app on your phone!
-
-### Option 2: Run on Android Studio Emulator
-1. Start your Android Emulator in Android Studio.
-2. In your terminal, run:
-   ```bash
-   cd mobile
-   npm install
-   npm run android
-   ```
+- Login with Admin / Worker (quick-fill demo buttons)
+- Dashboard: today / weekly / monthly sales + stock valuation
+- Item Master: search, filters, sell / add / edit / delete
+- Sell & Add Stock modals (pre-selects item from Item Master)
+- Transactions log (last 30 days)
 
 ---
 
-## 📦 How to Build Standalone Android APK File (.apk)
+## Prerequisites
 
-To build an installable `.apk` file for Android:
+- Node.js 18+
+- Phone: install **Expo Go** from the Play Store / App Store  
+  **or** Android Studio emulator
 
-1. Install EAS CLI:
-   ```bash
-   npm install -g eas-cli
-   ```
-2. Log in to Expo:
-   ```bash
-   eas login
-   ```
-3. Build the APK preview:
-   ```bash
-   cd mobile
-   eas build -p android --profile preview
-   ```
-4. Once completed, download the `.apk` link provided by EAS and install it directly on any Android phone!
+> Note: Expo SDK 51 needs a matching Expo Go version. If the QR scan fails with a version mismatch, update Expo Go or use `npx expo start --tunnel`.
+
+---
+
+## How to run
+
+### 1) Install dependencies (first time only)
+
+```bash
+cd mobile
+npm install
+```
+
+### 2) Start Expo
+
+From the project root:
+
+```bash
+npm run mobile
+```
+
+Or from the `mobile` folder:
+
+```bash
+npm start
+```
+
+Then:
+
+1. Open **Expo Go** on your phone (same Wi‑Fi as your computer)
+2. Scan the QR code from the terminal / browser
+3. If the phone cannot reach your PC, use tunnel mode:
+
+```bash
+cd mobile
+npm run tunnel
+```
+
+### 3) Android emulator (optional)
+
+1. Start an Android emulator in Android Studio
+2. Run:
+
+```bash
+cd mobile
+npm run android
+```
+
+---
+
+## Login credentials
+
+| Role   | Username | Password   |
+|--------|----------|------------|
+| Admin  | `admin`  | `admin123` |
+| Worker | `worker` | `worker123` |
+
+First login after the backend has been idle may take 30–60 seconds (Render free tier cold start). Wait and retry if needed.
+
+---
+
+## Build a standalone Android APK (optional)
+
+```bash
+npm install -g eas-cli
+eas login
+cd mobile
+eas build -p android --profile preview
+```
+
+(Requires an Expo account and `eas.json` profile setup.)

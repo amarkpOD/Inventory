@@ -1,1 +1,13 @@
 node_modules
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.testing
+server/.env.production
+CREDENTIALS.md
+.DS_Store
+mobile/ulimit
+mobile/inventory-mobile-app@1.0.0
+mobile/.expo/
+*.log

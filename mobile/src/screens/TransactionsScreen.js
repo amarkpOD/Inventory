@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { fetchTransactions } from '../services/api';
-import { History, ArrowDownRight, ArrowUpRight, Filter, Clock } from 'lucide-react-native';
+import { History, ArrowDownRight, ArrowUpRight } from 'lucide-react-native';
 
 export default function TransactionsScreen() {
   const [transactions, setTransactions] = useState([]);
@@ -18,7 +18,7 @@ export default function TransactionsScreen() {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [error, setError] = useState('');
 
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     try {
       setError('');
       const res = await fetchTransactions({
@@ -32,16 +32,17 @@ export default function TransactionsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [typeFilter]);
 
   useEffect(() => {
+    setLoading(true);
     loadTransactions();
-  }, [typeFilter]);
+  }, [loadTransactions]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadTransactions();
-  }, []);
+  }, [loadTransactions]);
 
   const formatCurrency = (val) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(val || 0);

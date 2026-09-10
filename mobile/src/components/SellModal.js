@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,13 +6,15 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
+  Pressable,
   ScrollView,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { fetchItems, quickStockAdjust } from '../services/api';
-import { ShoppingBag, Search, Check, X, DollarSign } from 'lucide-react-native';
+import { ShoppingBag, Search, Check, X } from 'lucide-react-native';
 
-export default function SellModal({ visible, onClose, onSuccess }) {
+export default function SellModal({ visible, onClose, onSuccess, initialItem }) {
   const [items, setItems] = useState([]);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,9 +27,11 @@ export default function SellModal({ visible, onClose, onSuccess }) {
   useEffect(() => {
     if (visible) {
       setSearchTerm('');
+      setQuantityToSell('1');
+      setError('');
       loadItemsList();
     }
-  }, [visible]);
+  }, [visible, initialItem]);
 
   const loadItemsList = async () => {
     setFetching(true);
@@ -36,9 +40,17 @@ export default function SellModal({ visible, onClose, onSuccess }) {
       const res = await fetchItems({ limit: 500, sortBy: 'name', sortOrder: 'asc' });
       const fetchedItems = res.data.items || [];
       setItems(fetchedItems);
-      if (fetchedItems.length > 0) {
-        setSelectedItemId(fetchedItems[0]._id);
-        setCustomPrice(String(fetchedItems[0].unitPrice || 0));
+
+      const preferred =
+        (initialItem && fetchedItems.find((i) => i._id === initialItem._id)) || null;
+
+      if (preferred) {
+        setSelectedItemId(preferred._id);
+        setCustomPrice(String(preferred.unitPrice || 0));
+        setSearchTerm(preferred.name || '');
+      } else {
+        setSelectedItemId('');
+        setCustomPrice('');
       }
     } catch (err) {
       setError('Failed to load items list');
@@ -47,16 +59,40 @@ export default function SellModal({ visible, onClose, onSuccess }) {
     }
   };
 
-  const filteredItems = items.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredItems = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        (item.sku && item.sku.toLowerCase().includes(q))
+    );
+  }, [items, searchTerm]);
+
+  useEffect(() => {
+    if (!visible || fetching || filteredItems.length === 0) return;
+    const stillVisible = filteredItems.some((i) => i._id === selectedItemId);
+    if (!stillVisible) {
+      const next = filteredItems[0];
+      setSelectedItemId(next._id);
+      setCustomPrice(String(next.unitPrice || 0));
+    }
+  }, [filteredItems, visible, fetching]);
 
   const selectedItem = items.find((i) => i._id === selectedItemId);
 
+  const selectItem = useCallback((item) => {
+    Keyboard.dismiss();
+    setSelectedItemId(item._id);
+    setCustomPrice(String(item.unitPrice || 0));
+    setError('');
+  }, []);
+
   const handleSubmit = async () => {
-    if (!selectedItem) return;
+    if (!selectedItem) {
+      setError('Please select an item first');
+      return;
+    }
 
     const sellQty = Number(quantityToSell);
     const salePrice = Number(customPrice);
@@ -85,8 +121,10 @@ export default function SellModal({ visible, onClose, onSuccess }) {
         customUnitPrice: salePrice,
         note: `Sold ${sellQty} unit(s) @ ₹${salePrice}`,
       });
-      if (onSuccess) onSuccess();
       onClose();
+      if (onSuccess) {
+        onSuccess(`Sold ${sellQty} × ${selectedItem.name}`, 'sell');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to record sell transaction');
     } finally {
@@ -100,6 +138,7 @@ export default function SellModal({ visible, onClose, onSuccess }) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={Keyboard.dismiss} />
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.modalHeader}>
@@ -112,122 +151,142 @@ export default function SellModal({ visible, onClose, onSuccess }) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ maxHeight: 480 }}>
-            {error ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
+          {fetching ? (
+            <ActivityIndicator size="large" color="#6366f1" style={{ marginVertical: 30 }} />
+          ) : (
+            <>
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
 
-            {fetching ? (
-              <ActivityIndicator size="large" color="#6366f1" style={{ marginVertical: 30 }} />
-            ) : (
-              <>
-                {/* Search Bar */}
-                <Text style={styles.fieldLabel}>Search Item Name / SKU</Text>
-                <View style={styles.searchBox}>
-                  <Search size={16} color="#94a3b8" style={{ marginRight: 8 }} />
+              {/* Search */}
+              <Text style={styles.fieldLabel}>Search Item Name / SKU</Text>
+              <View style={styles.searchBox}>
+                <Search size={16} color="#94a3b8" style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Type to filter matching items..."
+                  placeholderTextColor="#64748b"
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
+                  returnKeyType="done"
+                  blurOnSubmit
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              {/* Compact list: ~2–3 rows + scroll */}
+              <Text style={styles.subLabel}>
+                Matching ({filteredItems.length}) — tap once to select
+              </Text>
+              <ScrollView
+                style={styles.itemsList}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="always"
+                showsVerticalScrollIndicator
+              >
+                {filteredItems.length === 0 ? (
+                  <Text style={styles.emptyText}>No matching items found</Text>
+                ) : (
+                  filteredItems.map((item) => {
+                    const isSelected = item._id === selectedItemId;
+                    return (
+                      <Pressable
+                        key={item._id}
+                        onPressIn={() => selectItem(item)}
+                        hitSlop={6}
+                        style={({ pressed }) => [
+                          styles.itemCard,
+                          isSelected && styles.itemCardSelected,
+                          pressed && styles.itemCardPressed,
+                        ]}
+                      >
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <Text
+                            style={[styles.itemName, isSelected && styles.itemNameSelected]}
+                            numberOfLines={1}
+                          >
+                            {item.name}
+                          </Text>
+                          <Text style={styles.itemMeta}>
+                            Default: {formatCurrency(item.unitPrice)}
+                          </Text>
+                        </View>
+                        <View style={styles.itemRight}>
+                          <Text
+                            style={[
+                              styles.stockBadge,
+                              item.quantity > 0 ? styles.stockSuccess : styles.stockDanger,
+                            ]}
+                          >
+                            {item.quantity} in stock
+                          </Text>
+                          {isSelected ? <Check size={16} color="#6366f1" /> : null}
+                        </View>
+                      </Pressable>
+                    );
+                  })
+                )}
+              </ScrollView>
+
+              {/* Price / Qty */}
+              <View style={styles.gridRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Selling Price (₹)</Text>
                   <TextInput
-                    style={styles.searchInput}
-                    placeholder="Type to filter matching items..."
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={customPrice}
+                    onChangeText={setCustomPrice}
+                    placeholder="0"
                     placeholderTextColor="#64748b"
-                    value={searchTerm}
-                    onChangeText={setSearchTerm}
                   />
                 </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Quantity to Sell</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="number-pad"
+                    value={quantityToSell}
+                    onChangeText={setQuantityToSell}
+                  />
+                </View>
+              </View>
 
-                {/* Clickable Items List */}
-                <Text style={styles.subLabel}>
-                  Matching Items ({filteredItems.length}): Tap item to select
-                </Text>
-                <ScrollView style={styles.itemsListContainer} nestedScrollEnabled>
-                  {filteredItems.length === 0 ? (
-                    <Text style={styles.emptyText}>No matching items found</Text>
+              {selectedItem ? (
+                <View style={styles.revenueBanner}>
+                  <Text style={styles.revenueLabel} numberOfLines={1}>
+                    {selectedItem.name}
+                  </Text>
+                  <Text style={styles.revenueValue}>
+                    {formatCurrency((Number(quantityToSell) || 0) * (Number(customPrice) || 0))}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Buttons always pinned at bottom of sheet */}
+              <View style={styles.actionsRow}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.submitBtn, (loading || !selectedItem) && { opacity: 0.6 }]}
+                  onPress={handleSubmit}
+                  disabled={loading || !selectedItem}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#ffffff" />
                   ) : (
-                    filteredItems.map((item) => {
-                      const isSelected = item._id === selectedItemId;
-                      return (
-                        <TouchableOpacity
-                          key={item._id}
-                          style={[styles.itemCard, isSelected && styles.itemCardSelected]}
-                          onPress={() => {
-                            setSelectedItemId(item._id);
-                            setCustomPrice(String(item.unitPrice || 0));
-                            setError('');
-                          }}
-                        >
-                          <View>
-                            <Text style={[styles.itemName, isSelected && { color: '#ffffff', fontWeight: '800' }]}>
-                              {item.name}
-                            </Text>
-                            <Text style={styles.itemMeta}>Default: {formatCurrency(item.unitPrice)}</Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Text style={[styles.stockBadge, item.quantity > 0 ? styles.stockSuccess : styles.stockDanger]}>
-                              {item.quantity} in stock
-                            </Text>
-                            {isSelected && <Check size={18} color="#6366f1" />}
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })
+                    <Text style={styles.submitBtnText}>Confirm Sell</Text>
                   )}
-                </ScrollView>
-
-                {/* Inputs Grid */}
-                <View style={styles.gridRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Selling Price (₹)</Text>
-                    <TextInput
-                      style={styles.input}
-                      keyboardType="numeric"
-                      value={customPrice}
-                      onChangeText={setCustomPrice}
-                      placeholder="0"
-                      placeholderTextColor="#64748b"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Quantity to Sell</Text>
-                    <TextInput
-                      style={styles.input}
-                      keyboardType="number-pad"
-                      value={quantityToSell}
-                      onChangeText={setQuantityToSell}
-                    />
-                  </View>
-                </View>
-
-                {/* Revenue Calculation Banner */}
-                {selectedItem && (
-                  <View style={styles.revenueBanner}>
-                    <Text style={styles.revenueLabel}>Calculated Total Revenue:</Text>
-                    <Text style={styles.revenueValue}>
-                      {formatCurrency((Number(quantityToSell) || 0) * (Number(customPrice) || 0))}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Submit Action Buttons */}
-                <View style={styles.actionsRow}>
-                  <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.submitBtn, (loading || !selectedItem) && { opacity: 0.6 }]}
-                    onPress={handleSubmit}
-                    disabled={loading || !selectedItem}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#ffffff" />
-                    ) : (
-                      <Text style={styles.submitBtnText}>Confirm Sell</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </ScrollView>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -237,14 +296,18 @@ export default function SellModal({ visible, onClose, onSuccess }) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
     backgroundColor: '#0f172a',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    paddingBottom: 28,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -252,26 +315,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   modalTitle: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '800',
   },
-  closeBtn: {
-    padding: 4,
-  },
+  closeBtn: { padding: 4 },
   errorBox: {
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     padding: 10,
     borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  errorText: {
-    color: '#f87171',
-    fontSize: 12,
-  },
+  errorText: { color: '#f87171', fontSize: 12 },
   fieldLabel: {
     color: '#e2e8f0',
     fontSize: 13,
@@ -289,7 +347,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1e293b',
     borderRadius: 10,
     paddingHorizontal: 12,
-    marginBottom: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#334155',
   },
@@ -299,9 +357,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
   },
-  itemsListContainer: {
-    maxHeight: 150,
-    marginBottom: 16,
+  // ~2–3 item rows visible
+  itemsList: {
+    maxHeight: 132,
+    marginBottom: 14,
   },
   emptyText: {
     color: '#64748b',
@@ -314,24 +373,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: 8,
     marginBottom: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   itemCardSelected: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: 'rgba(99, 102, 241, 0.25)',
     borderColor: '#6366f1',
+  },
+  itemCardPressed: {
+    backgroundColor: 'rgba(99, 102, 241, 0.35)',
   },
   itemName: {
     color: '#cbd5e1',
     fontSize: 14,
     fontWeight: '600',
   },
+  itemNameSelected: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
   itemMeta: {
     color: '#64748b',
     fontSize: 11,
+    marginTop: 1,
+  },
+  itemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   stockBadge: {
     fontSize: 11,
@@ -339,6 +412,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    overflow: 'hidden',
   },
   stockSuccess: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -373,11 +447,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 12,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 14,
+    gap: 8,
   },
   revenueLabel: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 12,
+    flex: 1,
   },
   revenueValue: {
     color: '#34d399',
@@ -388,7 +464,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
-    marginTop: 8,
   },
   cancelBtn: {
     paddingVertical: 12,
@@ -405,6 +480,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
+    minWidth: 130,
+    alignItems: 'center',
   },
   submitBtnText: {
     color: '#ffffff',

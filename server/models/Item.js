@@ -58,7 +58,12 @@ const itemSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'Inventory', // Exact collection name as requested
+    // Production: Inventory | Local/testing: Testing (override with ITEMS_COLLECTION)
+    collection:
+      process.env.ITEMS_COLLECTION ||
+      (process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production'
+        ? 'Inventory'
+        : 'Testing'),
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   }
